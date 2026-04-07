@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
 
 
-//SCHEMA DOS USUARIOS
+//SCHEMA DOS FUNCIONARIOS
 const Schema = mongoose.Schema;
 
-const UserSchema = new Schema({
+const FuncionarioSchema = new Schema({
     id: mongoose.Schema.Types.ObjectId,
     nome: String,
-    num_sus: String,
+    cpf: String,
     senha: String,
     data_nasc: Date
 });
 
-export const UserModel = mongoose.model("User", UserSchema);
+export const FuncionarioModel = mongoose.model("funcionario", FuncionarioSchema);

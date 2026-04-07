@@ -1,7 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 
-import {UserModel} from "./schemas/user.js";
+import {FuncionarioModel, funcionarioModel, UserModel} from "./schemas/funcionario.js";
 import { FilaModel } from "./schemas/fila.js";
 
 const app = express();
@@ -13,21 +13,21 @@ mongoose.connect("mongodb+srv://root:root@cluster0.mhygv6b.mongodb.net/?appName=
 
 
 
-app.post("/users", async (request, response)=>{
+app.post("/funcionario", async (request, response)=>{
     
     try{
         //VERIFICA SE O USUÁRIO JA EXISTE
-        const elemento = await UserModel.findOne({ num_sus: request.body.num_sus });
+        const elemento = await FuncionarioModel.findOne({ cpf: request.body.cpf });
         
         if(elemento){
-            console.log("Usuário já existe");
-            return response.status(400).json({ message: "Usuário ja existe com esse número do SUS" });
+            console.log("Funcionário já Cadastrado");
+            return response.status(400).json({ message: "Funcionario ja existe com esse número de CPF" });
             
         }
 
-    await UserModel.create({
+    await FuncionarioModel.create({
         nome:request.body.nome,
-        num_sus: request.body.num_sus,
+        cpf: request.body.cpf,
         senha: request.body.senha,
         data_nasc: request.body.data_nasc
 
@@ -46,7 +46,7 @@ app.post("/login", async (request,response) => {
 
     try {
 
-        const nomeUsuario = await UserModel.findOne({ nome: request.body.nome });
+        const nomeUsuario = await FuncionarioModel.findOne({ nome: request.body.nome });
         console.log(nomeUsuario);
 
         if(!nomeUsuario){
@@ -57,7 +57,7 @@ app.post("/login", async (request,response) => {
 
         if(nomeUsuario){
             console.log("Usuário existe");
-            const senha = await UserModel.findOne({nome: request.body.nome, senha: request.body.senha});
+            const senha = await FuncionarioModel.findOne({nome: request.body.nome, senha: request.body.senha});
             console.log(senha);
                 if(senha){
                     return response.json({message: "logado"});
@@ -106,4 +106,3 @@ app.post("/adiciona_na_fila", async (request, response)=>{
 app.listen( 3333 ,()=>{
     console.log("SERVIDOR INICIADO COM SUCESSO!")
 });
-
