@@ -1,8 +1,9 @@
 import express from "express";
 import mongoose from "mongoose";
 
-import {FuncionarioModel, funcionarioModel, UserModel} from "./schemas/funcionario.js";
-import { FilaModel } from "./schemas/fila.js";
+import {FuncionarioModel} from "./schemas/funcionario.js";
+import {FilaModel} from "./schemas/fila.js";
+import {criarFuncionario} from "./controllers/funcionarioController.js";
 
 const app = express();
 
@@ -14,24 +15,20 @@ mongoose.connect("mongodb+srv://root:root@cluster0.mhygv6b.mongodb.net/?appName=
 
 
 app.post("/funcionario", async (request, response)=>{
+
+    const body = request.body;
     
     try{
-        //VERIFICA SE O USUÁRIO JA EXISTE
-        const elemento = await FuncionarioModel.findOne({ cpf: request.body.cpf });
+        //VERIFICA SE O FUNCIONARIO JA EXISTE
+        const elemento = await FuncionarioModel.findOne({ cpf: body.cpf });
         
         if(elemento){
             console.log("Funcionário já Cadastrado");
             return response.status(400).json({ message: "Funcionario ja existe com esse número de CPF" });
             
         }
-
-    await FuncionarioModel.create({
-        nome:request.body.nome,
-        cpf: request.body.cpf,
-        senha: request.body.senha,
-        data_nasc: request.body.data_nasc
-
-    });
+        const novoFuncionario = await criarFuncionario(body.nome, body.cpf, body.senha, body.data_nasc);
+        return response.status(201).json({message: "Funcionário criado com sucesso", funcionario: novoFuncionario});
 
     }catch(erro){
 
