@@ -1,4 +1,4 @@
-import express from "express";
+import express, { request } from "express";
 import mongoose from "mongoose";
 
 import {FuncionarioModel} from "./schemas/funcionario.js";
@@ -14,25 +14,25 @@ mongoose.connect("mongodb+srv://root:root@cluster0.mhygv6b.mongodb.net/?appName=
 
 
 
-app.post("/funcionario", async (request, response)=>{
+app.post("/cadastra_funcionario", async (request, response)=>{
 
     const body = request.body;
     
     try{
         //VERIFICA SE O FUNCIONARIO JA EXISTE
         const elemento = await FuncionarioModel.findOne({ cpf: body.cpf });
-        
+        console.log(elemento);
+
         if(elemento){
-            console.log("Funcionário já Cadastrado");
             return response.status(400).json({ message: "Funcionario ja existe com esse número de CPF" });
-            
-        }
+        }else{
         const novoFuncionario = await criarFuncionario(body.nome, body.cpf, body.senha, body.data_nasc);
         return response.status(201).json({message: "Funcionário criado com sucesso", funcionario: novoFuncionario});
+        }
 
     }catch(erro){
 
-        return response.status(400).json({mensagem: "Erro"});
+        return response.status(400).json({mensagem: "Erro catch"});
     }
    
 });
@@ -100,6 +100,11 @@ app.post("/adiciona_na_fila", async (request, response)=>{
     console.log(request.body);
 })
 
-app.listen( 3333 ,()=>{
-    console.log("SERVIDOR INICIADO COM SUCESSO!")
+app.get("/conectado",async (request,response)=>{
+    return response.json({mensagem:"Conectado"});
+})
+
+app.listen(3333 ,async (request,response)=>{
+    console.log("SERVIDOR INICIADO COM SUCESSO!");
+    
 });
