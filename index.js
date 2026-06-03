@@ -75,7 +75,9 @@ app.post("/login", async (request,response) => {
 
 
 app.post("/adiciona_na_fila", async (request, response)=>{
-
+    if (!request.headers.authorization) {
+        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
+    }
 
     try{
         // VERIFICA SE O USUÁRIO JÁ ESTÁ NA FILA
@@ -93,6 +95,7 @@ app.post("/adiciona_na_fila", async (request, response)=>{
     });
 
     return response.status(201).json({mensagem: "Pedido na fila"});
+    
     }catch(erro){
         return response.status(400).json({mensagem: "Erro"});
     }
@@ -102,14 +105,23 @@ app.post("/adiciona_na_fila", async (request, response)=>{
 
 app.get("/conectado",async (request,response)=>{
     if (!request.headers.authorization) {
-        return response
-        .status(401)
-        .json({ message: "Voce nao possui permissao para acessar essa rota" });
+        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
     }else{
         return response.json({mensagem:"Conectado"});
     }
 })
 
+app.get("/fila", async (request, response)=>{
+    if (!request.headers.authorization) {
+        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
+    }
+    
+    console.log("/fila");
+    const fila = FilaModel.filas.find();
+    console.log(fila);
+    return fila;
+
+})
 app.listen(3333 ,async (request,response)=>{
     console.log("SERVIDOR INICIADO COM SUCESSO!");
     
