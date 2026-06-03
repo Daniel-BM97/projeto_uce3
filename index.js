@@ -1,9 +1,10 @@
 import express, { request } from "express";
 import mongoose from "mongoose";
+import  jwt  from "jsonwebtoken";
 
 import {FuncionarioModel} from "./schemas/funcionario.js";
 import {FilaModel} from "./schemas/fila.js";
-import {criarFuncionario} from "./controllers/funcionarioController.js";
+import {criarFuncionario, loginFuncionario} from "./controllers/funcionarioController.js";
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.post("/cadastra_funcionario", async (request, response)=>{
 app.post("/login", async (request,response) => {
 
     console.log(request.body)
+    const token_usuario = jwt.sign({nome:request.body.nome},"segredo",{expiresIn: '10m'});
 
     try {
 
@@ -54,12 +56,10 @@ app.post("/login", async (request,response) => {
 
         if(nomeUsuario){
             console.log("Usuário existe");
-            const senha = await FuncionarioModel.findOne({nome: request.body.nome, senha: request.body.senha});
-            console.log(senha);
-                if(senha){
-                    return response.json({message: "logado"});
-                }else{
-                    return response.status(400).json({message: "Senha Incorreta"});
+            const status = loginFuncionario(request.body.nome, request.body.senha);
+            console.log(status);
+                if(status){
+                     return response.json({ token: token_usuario });
                 }
         }
     
@@ -67,7 +67,7 @@ app.post("/login", async (request,response) => {
     } catch (Error) {
         console.log("Usuário");
         console.log(Error);
-        return response.status(400).json({mensagem: "Erro"});
+        return response.status(500).json({mensagem: "Erro"});
 
     }
     
@@ -101,7 +101,13 @@ app.post("/adiciona_na_fila", async (request, response)=>{
 })
 
 app.get("/conectado",async (request,response)=>{
-    return response.json({mensagem:"Conectado"});
+    if (!request.headers.authorization) {
+        return response
+        .status(401)
+        .json({ message: "Voce nao possui permissao para acessar essa rota" });
+    }else{
+        return response.json({mensagem:"Conectado"});
+    }
 })
 
 app.listen(3333 ,async (request,response)=>{
