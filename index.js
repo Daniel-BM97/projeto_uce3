@@ -117,7 +117,7 @@ app.get("/fila", async (request, response)=>{
     }
     
     console.log("/fila");
-    const fila = FilaModel.filas.find();
+    const fila = FilaModel.find({});
     console.log(fila);
     return fila;
 
