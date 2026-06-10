@@ -38,6 +38,12 @@ app.post("/cadastra_funcionario", async (request, response)=>{
    
 });
 
+app.post("/cadastra_paciente", async (request, response)=>{
+    
+              
+
+});
+
 app.post("/login", async (request,response) => {
 
     console.log(request.body)
