@@ -5,6 +5,7 @@ import  jwt  from "jsonwebtoken";
 import {FuncionarioModel} from "./schemas/funcionario.js";
 import {FilaModel} from "./schemas/fila.js";
 import {criarFuncionario, loginFuncionario} from "./controllers/funcionarioController.js";
+import { PacienteModel } from "./schemas/paciente.js";
 
 const app = express();
 
@@ -39,8 +40,26 @@ app.post("/cadastra_funcionario", async (request, response)=>{
 });
 
 app.post("/cadastra_paciente", async (request, response)=>{
-    
-              
+    if (!request.headers.authorization) {
+        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
+    }
+
+    const paciente = request.body;
+
+    try{
+        //VERIFICA SE O PACIENTE JA EXISTE
+        const elemento = await PacienteModel.findOne({ num_sus: paciente.num_sus });
+        console.log(elemento);
+
+        if(elemento){
+            return response.status(400).json({ message: "Paciente já existe com esse número do SUS"});
+        }else{
+            const novopaciente = await PacienteModel.create(elemento);
+            return response.json(elemento);
+        }
+    }catch(erro){
+        return response.status(400).json({mensagem: "Erro catch"});
+    }
 
 });
 
