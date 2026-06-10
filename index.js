@@ -54,8 +54,8 @@ app.post("/cadastra_paciente", async (request, response)=>{
         if(elemento){
             return response.status(400).json({ message: "Paciente já existe com esse número do SUS"});
         }else{
-            const novopaciente = await PacienteModel.create(elemento);
-            return response.json(elemento);
+            const novopaciente = await PacienteModel.create(paciente);
+            return response.json(novopaciente);
         }
     }catch(erro){
         return response.status(400).json({mensagem: "Erro catch"});
