@@ -1,24 +1,34 @@
 import { FuncionarioModel } from "../schemas/funcionario.js";
-import { convertHashPassword } from "./services/passwordService.js";
-import { comparePassword }  from "./services/passwordService.js";
+import { convertHashPassword, comparePassword } from "./services/passwordService.js";
 
 export const criarFuncionario = async (nome, cpf, senha, data_nasc) => {
-  const hashedPassword = convertHashPassword(senha);
+    const hashedPassword = convertHashPassword(senha);
 
-  return await FuncionarioModel.create({nome, cpf, senha: hashedPassword, data_nasc });
+    const funcionario = await FuncionarioModel.create({
+        nome,
+        cpf,
+        senha: hashedPassword,
+        data_nasc,
+    });
+
+    const funcionarioObj = funcionario.toObject();
+    delete funcionarioObj.senha;
+
+    return funcionarioObj;
 };
 
-export const loginFuncionario = async (nome, senha)=>{
-  const funcionario = await FuncionarioModel.findOne({ nome });
- 
-  const comparaSenha = comparePassword(senha, funcionario.senha);
-  if (!comparaSenha) {
-    console.log("Senha incorreta");
-    throw new Error("Senha incorreta");
-    return false;
-  }
+export const autenticarFuncionario = async (nome, senha) => {
+    const funcionario = await FuncionarioModel.findOne({ nome });
 
-  return true;
-}
+    if (!funcionario) {
+        throw new Error("Usuário não encontrado");
+    }
 
- 
+    const senhaConfere = comparePassword(senha, funcionario.senha);
+
+    if (!senhaConfere) {
+        throw new Error("Senha incorreta");
+    }
+
+    return funcionario;
+};

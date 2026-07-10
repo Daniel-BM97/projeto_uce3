@@ -1,153 +1,173 @@
-import express, { request } from "express";
+import express from "express";
 import mongoose from "mongoose";
-import  jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
-import {FuncionarioModel} from "./schemas/funcionario.js";
-import {FilaModel} from "./schemas/fila.js";
-import {criarFuncionario, loginFuncionario} from "./controllers/funcionarioController.js";
+import { FuncionarioModel } from "./schemas/funcionario.js";
 import { PacienteModel } from "./schemas/paciente.js";
+import { criarFuncionario, autenticarFuncionario } from "./controllers/funcionarioController.js";
+import {
+    adicionarNaFila,
+    listarFila,
+    atualizarStatus,
+    atualizarEtapa,
+} from "./controllers/filaController.js";
+import { autenticarToken, JWT_SECRET } from "./middleware/authMiddleware.js";
 
 const app = express();
 
 app.use(express.json());
 
+mongoose
+    .connect("mongodb+srv://root:root@cluster0.mhygv6b.mongodb.net/?appName=Cluster0")
+    .then(() => console.log("BANCO DE DADOS CONECTADO!"))
+    .catch((erro) => console.error("Erro ao conectar ao banco:", erro.message));
 
-mongoose.connect("mongodb+srv://root:root@cluster0.mhygv6b.mongodb.net/?appName=Cluster0").then(()=>console.log("BANCO DE DADOS CONECTADO!"));
-
-
-
-app.post("/cadastra_funcionario", async (request, response)=>{
-
-    const body = request.body;
-    
-    try{
-        //VERIFICA SE O FUNCIONARIO JA EXISTE
-        const elemento = await FuncionarioModel.findOne({ cpf: body.cpf });
-        console.log(elemento);
-
-        if(elemento){
-            return response.status(400).json({ message: "Funcionario ja existe com esse número de CPF" });
-        }else{
-        const novoFuncionario = await criarFuncionario(body.nome, body.cpf, body.senha, body.data_nasc);
-        return response.status(201).json({message: "Funcionário criado com sucesso", funcionario: novoFuncionario});
-        }
-
-    }catch(erro){
-
-        return response.status(400).json({mensagem: "Erro catch"});
-    }
-   
-});
-
-app.post("/cadastra_paciente", async (request, response)=>{
-    if (!request.headers.authorization) {
-        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
-    }
-
-    const paciente = request.body;
-
-    try{
-        //VERIFICA SE O PACIENTE JA EXISTE
-        const elemento = await PacienteModel.findOne({ num_sus: paciente.num_sus });
-        console.log(elemento);
-
-        if(elemento){
-            return response.status(400).json({ message: "Paciente já existe com esse número do SUS"});
-        }else{
-            const novopaciente = await PacienteModel.create(paciente);
-            return response.json(novopaciente);
-        }
-    }catch(erro){
-        return response.status(400).json({mensagem: "Erro catch"});
-    }
-
-});
-
-app.post("/login", async (request,response) => {
-
-    console.log(request.body)
-    const token_usuario = jwt.sign({nome:request.body.nome},"segredo",{expiresIn: '10m'});
+app.post("/cadastra_funcionario", async (request, response) => {
+    const { nome, cpf, senha, data_nasc } = request.body;
 
     try {
+        const existente = await FuncionarioModel.findOne({ cpf });
 
-        const nomeUsuario = await FuncionarioModel.findOne({ nome: request.body.nome });
-        console.log(nomeUsuario);
-
-        if(!nomeUsuario){
-            
-            return response.status(400).json({message: "Usuário não encontrado"});
-            
+        if (existente) {
+            return response.status(400).json({ message: "Funcionario ja existe com esse número de CPF" });
         }
 
-        if(nomeUsuario){
-            console.log("Usuário existe");
-            const status = loginFuncionario(request.body.nome, request.body.senha);
-            console.log(status);
-                if(status){
-                     return response.json({ token: token_usuario });
-                }
-        }
-    
+        const funcionario = await criarFuncionario(nome, cpf, senha, data_nasc);
 
-    } catch (Error) {
-        console.log("Usuário");
-        console.log(Error);
-        return response.status(500).json({mensagem: "Erro"});
-
+        return response.status(201).json({
+            message: "Funcionário criado com sucesso",
+            funcionario,
+        });
+    } catch {
+        return response.status(400).json({ mensagem: "Erro ao cadastrar funcionário" });
     }
-    
-})
+});
 
+app.post("/login", async (request, response) => {
+    try {
+        const funcionario = await autenticarFuncionario(request.body.nome, request.body.senha);
 
-app.post("/adiciona_na_fila", async (request, response)=>{
-    if (!request.headers.authorization) {
-        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
-    }
+        const token = jwt.sign(
+            { nome: funcionario.nome, cpf: funcionario.cpf },
+            JWT_SECRET,
+            { expiresIn: "10m" }
+        );
 
-    try{
-        // VERIFICA SE O USUÁRIO JÁ ESTÁ NA FILA
-        const elemento = await FilaModel.findOne({ nome: request.body.nome });
-        
-        if(elemento){
-            return response.status(400).json({ message: "Usuário ja existe na Fila" });
+        return response.json({ token });
+    } catch (erro) {
+        if (erro.message === "Usuário não encontrado" || erro.message === "Senha incorreta") {
+            return response.status(400).json({ message: erro.message });
         }
 
-    await FilaModel.create({
-        nome:request.body.nome,
-        num_sus: request.body.num_sus,
-        posicao: request.body.posicao
-
-    });
-
-    return response.status(201).json({mensagem: "Pedido na fila"});
-    
-    }catch(erro){
-        return response.status(400).json({mensagem: "Erro"});
+        return response.status(500).json({ mensagem: "Erro ao fazer login" });
     }
-    console.log("Fui Chamado");
-    console.log(request.body);
-})
+});
 
-app.get("/conectado",async (request,response)=>{
-    if (!request.headers.authorization) {
-        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
-    }else{
-        return response.json({mensagem:"Conectado"});
+app.post("/cadastra_paciente", autenticarToken, async (request, response) => {
+    const { nome, num_sus } = request.body;
+
+    try {
+        const existente = await PacienteModel.findOne({ num_sus });
+
+        if (existente) {
+            return response.status(400).json({ message: "Paciente já existe com esse número do SUS" });
+        }
+
+        const paciente = await PacienteModel.create({ nome, num_sus });
+
+        return response.status(201).json(paciente);
+    } catch {
+        return response.status(400).json({ mensagem: "Erro ao cadastrar paciente" });
     }
-})
+});
 
-app.get("/fila", async (request, response)=>{
-    if (!request.headers.authorization) {
-        return response.status(401).json({ message: "Voce nao possui permissao para acessar essa rota" });
+app.post("/adiciona_na_fila", autenticarToken, async (request, response) => {
+    const { num_sus, prioridade } = request.body;
+
+    if (!num_sus) {
+        return response.status(400).json({ message: "num_sus é obrigatório" });
     }
-    
-    console.log("/fila");
-    const fila = await FilaModel.find({});
-    console.log(fila);
-    return response.json({ fila });
 
-})
-app.listen(3333 ,async (request,response)=>{
+    try {
+        const registro = await adicionarNaFila(num_sus, prioridade ?? 0);
+
+        return response.status(201).json({
+            message: "Paciente adicionado na fila",
+            fila: registro,
+        });
+    } catch (erro) {
+        if (erro.message === "Paciente não cadastrado" || erro.message === "Paciente já está na fila") {
+            return response.status(400).json({ message: erro.message });
+        }
+
+        return response.status(400).json({ mensagem: "Erro ao adicionar na fila" });
+    }
+});
+
+app.get("/fila", autenticarToken, async (request, response) => {
+    try {
+        const fila = await listarFila(request.query.status);
+
+        return response.json({ fila });
+    } catch {
+        return response.status(400).json({ mensagem: "Erro ao listar fila" });
+    }
+});
+
+app.patch("/fila/:id/status", autenticarToken, async (request, response) => {
+    const { status } = request.body;
+    const statusValidos = ["aguardando", "em_atendimento", "finalizado"];
+
+    if (!statusValidos.includes(status)) {
+        return response.status(400).json({
+            message: "Status inválido. Use: aguardando, em_atendimento ou finalizado",
+        });
+    }
+
+    try {
+        const registro = await atualizarStatus(request.params.id, status);
+
+        return response.json({ message: "Status atualizado", fila: registro });
+    } catch (erro) {
+        if (erro.message === "Registro da fila não encontrado") {
+            return response.status(404).json({ message: erro.message });
+        }
+
+        return response.status(400).json({ mensagem: "Erro ao atualizar status" });
+    }
+});
+
+app.patch("/fila/:id/etapa", autenticarToken, async (request, response) => {
+    const { etapa } = request.body;
+    const etapasValidas = ["triagem", "consulta"];
+
+    if (!etapasValidas.includes(etapa)) {
+        return response.status(400).json({
+            message: "Etapa inválida. Use: triagem ou consulta",
+        });
+    }
+
+    try {
+        const registro = await atualizarEtapa(request.params.id, etapa);
+
+        return response.json({ message: "Etapa atualizada", fila: registro });
+    } catch (erro) {
+        if (erro.message === "Registro da fila não encontrado") {
+            return response.status(404).json({ message: erro.message });
+        }
+
+        if (erro.message === "Atendimento já finalizado") {
+            return response.status(400).json({ message: erro.message });
+        }
+
+        return response.status(400).json({ mensagem: "Erro ao atualizar etapa" });
+    }
+});
+
+app.get("/conectado", autenticarToken, (request, response) => {
+    return response.json({ mensagem: "Conectado", usuario: request.usuario });
+});
+
+app.listen(3333, () => {
     console.log("SERVIDOR INICIADO COM SUCESSO!");
-    
 });

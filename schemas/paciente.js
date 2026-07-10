@@ -2,10 +2,12 @@ import mongoose from "mongoose";
 
 const Schema = mongoose.Schema;
 
-//SCHEMA DOS PACIENTES
-const PacienteSchema = new Schema({
-  nome: String,
-  num_sus: String
-}, { timestamps: true });
+const PacienteSchema = new Schema(
+    {
+        nome: { type: String, required: true },
+        num_sus: { type: String, required: true, unique: true },
+    },
+    { timestamps: true }
+);
 
 export const PacienteModel = mongoose.model("Paciente", PacienteSchema);
